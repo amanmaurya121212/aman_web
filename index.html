@@ -1056,7 +1056,16 @@
       <button class="btn-icon-xs lightbox-close" id="closeLightboxBtn" aria-label="Close Lightbox">
         <i class="fa-solid fa-xmark"></i>
       </button>
-      <img src="" alt="" id="lightboxImg" class="lightbox-img" />
+      <div class="lightbox-media-wrap">
+        <button class="lightbox-nav-btn lightbox-prev" id="lightboxPrevBtn" aria-label="Previous Photo" title="Previous Photo">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <img src="" alt="" id="lightboxImg" class="lightbox-img" />
+        <button class="lightbox-nav-btn lightbox-next" id="lightboxNextBtn" aria-label="Next Photo" title="Next Photo">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <span class="lightbox-counter" id="lightboxCounter" hidden>1 / 1</span>
+      </div>
       <div class="lightbox-caption">
         <span class="moment-badge" id="lightboxBadge">Honour</span>
         <h3 id="lightboxTitle">Photo Title</h3>
@@ -1158,27 +1167,37 @@
               </div>
 
               <div class="form-group">
-                <label id="momentUploadLabel">Upload or Replace Photo From Phone / PC</label>
+                <label for="momentRankSelect"><i class="fa-solid fa-arrow-down-1-9"></i> Box Display Ranking / Order (Which Box Shows 1st, 2nd, etc.)</label>
+                <select id="momentRankSelect"></select>
+              </div>
+
+              <div class="form-group">
+                <label id="momentUploadLabel">Upload Photo(s) From Phone / PC (Select 1 or More)</label>
                 <div class="file-dropzone" id="momentFileDropzone">
-                  <input type="file" id="momentFileInput" accept="image/*" />
+                  <input type="file" id="momentFileInput" accept="image/*" multiple />
                   <div class="dropzone-prompt">
-                    <i class="fa-solid fa-camera"></i>
-                    <span id="momentDropzoneText">Tap here to choose or replace photo from Phone Gallery</span>
+                    <i class="fa-solid fa-images"></i>
+                    <span id="momentDropzoneText">Tap to choose 1 or MORE photos (Auto-slides in box)</span>
                   </div>
                 </div>
               </div>
 
-              <div class="admin-img-preview-wrap" id="momentPreviewWrap" hidden>
-                <img src="" alt="Preview" id="momentPreviewImg" />
-                <div class="preview-meta">
-                  <span class="preview-ready-badge"><i class="fa-solid fa-circle-check"></i> Photo Ready</span>
-                  <button type="button" class="btn-xs btn-danger" id="clearMomentImgBtn">Remove Photo</button>
+              <!-- Multi-Image Preview & Reordering Grid -->
+              <div class="admin-multi-preview-container" id="momentMultiPreviewWrap" hidden>
+                <div class="multi-preview-header">
+                  <span class="preview-ready-badge"><i class="fa-solid fa-circle-check"></i> <strong id="multiPreviewCount">0</strong> Photos in this Box</span>
+                  <button type="button" class="btn-xs btn-danger" id="clearAllMomentImgsBtn">Remove All Photos</button>
                 </div>
+                <p class="preview-help-sub">These photos will automatically cycle every few seconds in this box. Use arrows to choose which photo shows first.</p>
+                <div class="multi-thumbnails-grid" id="momentThumbnailsGrid"></div>
               </div>
 
               <div class="form-group">
-                <label for="momentImageUrlInput">Or Paste Image URL (Optional)</label>
-                <input type="text" id="momentImageUrlInput" placeholder="https://..." />
+                <label for="momentImageUrlInput">Or Add Photo by URL</label>
+                <div class="url-input-row">
+                  <input type="text" id="momentImageUrlInput" placeholder="https://... image URL" />
+                  <button type="button" class="btn-outline-sm" id="addMomentUrlBtn"><i class="fa-solid fa-plus"></i> Add URL</button>
+                </div>
               </div>
 
               <div class="form-group">
@@ -1194,10 +1213,10 @@
               </div>
             </form>
 
-            <!-- Existing Photos List -->
+            <!-- Existing Photos List with Ranking Controls -->
             <div class="admin-list-card">
-              <h4><i class="fa-solid fa-layer-group"></i> Current Photos on Website</h4>
-              <p class="admin-help-text">Tap <strong>Edit / Change Photo</strong> on any item to replace its photo or edit its title.</p>
+              <h4><i class="fa-solid fa-layer-group"></i> Current Photos &amp; Box Ranking</h4>
+              <p class="admin-help-text">Control which box shows 1st, 2nd, etc. using <strong>▲ Move Up</strong>, <strong>▼ Move Down</strong>, or change its rank number directly.</p>
               <div class="admin-items-list" id="adminMomentsList">
                 <!-- Populated by app.js -->
               </div>

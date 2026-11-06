@@ -34,6 +34,7 @@
         category: '1st Rank Honour',
         date: 'Samman Samaroh • Target Gurukul & DDU GU',
         imageUrl: '',
+        images: [],
         icon: 'fa-trophy',
         accent: 'gold',
         description: 'Honoured with the 1st Rank Academic Excellence Trophy ("Where Success is a Tradition" — Samman Samaroh) for achieving 1st Rank in the Department in B.Sc. (Computer Science, Statistics & Mathematics) at Deen Dayal Upadhyaya Gorakhpur University.'
@@ -44,6 +45,7 @@
         category: 'ISRO – URSC',
         date: 'Selected & Presented Paper',
         imageUrl: '',
+        images: [],
         icon: 'fa-satellite',
         accent: 'cyan',
         description: 'Selected to present original research paper "AI and ML in Space" at ISRO-URSC, investigating deep learning architectures for high-throughput satellite data processing and autonomous space mission operations.'
@@ -54,6 +56,7 @@
         category: 'Space AI Prototype',
         date: 'University Science Exhibition',
         imageUrl: '',
+        images: [],
         icon: 'fa-circle-nodes',
         accent: 'violet',
         description: 'Designed and showcased a decentralized orbital machine learning framework enabling collaborative model training across space missions while preserving data privacy and edge computing efficiency.'
@@ -64,6 +67,7 @@
         category: 'Engineering Lab',
         date: 'AI & Computer Vision',
         imageUrl: '',
+        images: [],
         icon: 'fa-robot',
         accent: 'emerald',
         description: 'From hand-coding real-time browser AR Iron Man suit overlays with PoseNet to engineering 100% offline neural desktop voice assistants (JARVIS) and LangGraph multi-turn agents.'
@@ -681,28 +685,74 @@
     initTiltCards();
   }
 
+  /* Helper to normalize images array from a moment item */
+  function getMomentImages(m) {
+    if (!m) return [];
+    if (Array.isArray(m.images) && m.images.length > 0) {
+      return m.images.filter((img) => img && img.trim() !== '');
+    }
+    if (m.imageUrl && m.imageUrl.trim()) {
+      return [m.imageUrl.trim()];
+    }
+    return [];
+  }
+
+  let momentCarouselIntervals = {};
+  let currentLightboxMoment = null;
+  let currentLightboxIndex = 0;
+
   function renderMoments() {
     const grid = document.getElementById('momentsGrid');
     if (!grid) return;
 
-    grid.innerHTML = state.moments.map((m) => {
-      const hasImg = m.imageUrl && m.imageUrl.trim() !== '';
+    // Clear all existing slideshow intervals to avoid leaks
+    Object.values(momentCarouselIntervals).forEach((timer) => clearInterval(timer));
+    momentCarouselIntervals = {};
+
+    grid.innerHTML = state.moments.map((m, index) => {
+      const images = getMomentImages(m);
       const iconClass = m.icon || 'fa-award';
+      const rankNum = index + 1;
+
+      let mediaHtml = '';
+      if (images.length > 1) {
+        // Multi-image auto-changing slideshow
+        const slidesHtml = images.map((imgUrl, i) => `
+          <img src="${escapeAttr(imgUrl)}" class="moment-slide-img ${i === 0 ? 'active' : ''}" data-slide-index="${i}" alt="${escapeAttr(m.title)} - Photo ${i + 1}" loading="lazy" />
+        `).join('');
+
+        const dotsHtml = images.map((_, i) => `
+          <span class="carousel-dot ${i === 0 ? 'active' : ''}" data-dot-index="${i}" title="View Photo ${i + 1}"></span>
+        `).join('');
+
+        mediaHtml = `
+          <div class="moment-slides-track" data-track-id="${escapeAttr(m.id)}">
+            ${slidesHtml}
+          </div>
+          <div class="moment-carousel-dots" data-dots-id="${escapeAttr(m.id)}">
+            ${dotsHtml}
+          </div>
+          <span class="moment-multi-badge"><i class="fa-solid fa-clone"></i> ${images.length} Photos</span>
+        `;
+      } else if (images.length === 1) {
+        mediaHtml = `<img src="${escapeAttr(images[0])}" alt="${escapeAttr(m.title)}" loading="lazy" />`;
+      } else {
+        mediaHtml = `
+          <div class="moment-placeholder-art">
+            <i class="fa-solid ${escapeAttr(iconClass)}"></i>
+            <span>Tap "Upload / Edit Photo" to attach photos here</span>
+          </div>
+        `;
+      }
 
       return `
-        <article class="moment-card reveal-up revealed" data-tilt-card>
-          <div class="moment-media" data-moment-id="${escapeAttr(m.id)}">
-            ${
-              hasImg
-                ? `<img src="${escapeAttr(m.imageUrl)}" alt="${escapeAttr(m.title)}" loading="lazy" />`
-                : `<div class="moment-placeholder-art">
-                     <i class="fa-solid ${escapeAttr(iconClass)}"></i>
-                     <span>Click "Upload / Edit Photo" to attach your photo here</span>
-                   </div>`
-            }
-            <button type="button" class="moment-edit-chip" data-edit-moment="${escapeAttr(m.id)}" title="Upload photo or edit title in Admin Dashboard">
+        <article class="moment-card reveal-up revealed" data-tilt-card data-card-moment-id="${escapeAttr(m.id)}">
+          <div class="moment-media" data-moment-id="${escapeAttr(m.id)}" title="${images.length > 1 ? 'Auto-slides photos • Click to view in fullscreen' : (images.length ? 'Click to view photo in fullscreen' : '')}">
+            <span class="moment-rank-badge">#${rankNum}</span>
+            ${mediaHtml}
+            <button type="button" class="moment-edit-chip" data-edit-moment="${escapeAttr(m.id)}" title="Upload photos, reorder, or edit title in Admin Dashboard">
               <i class="fa-solid fa-camera"></i>
-              <span>${hasImg ? 'Edit Photo / Title' : 'Upload Photo'}</span>
+              <span>${images.length ? (images.length > 1 ? `Edit (${images.length} Photos)` : 'Edit Photo / Title') : 'Upload Photo'}</span>
             </button>
           </div>
 
@@ -718,7 +768,51 @@
       `;
     }).join('');
 
-    // Wire lightbox click on media & edit button click
+    // Wire up Auto-Change Carousel Interval for multi-image boxes
+    state.moments.forEach((m) => {
+      const images = getMomentImages(m);
+      if (images.length <= 1) return;
+
+      const card = grid.querySelector(`[data-card-moment-id="${m.id}"]`);
+      if (!card) return;
+
+      const slides = card.querySelectorAll('.moment-slide-img');
+      const dots = card.querySelectorAll('.carousel-dot');
+      let currentIndex = 0;
+      let isPaused = false;
+
+      function goToSlide(idx) {
+        currentIndex = (idx + images.length) % images.length;
+        slides.forEach((sl, i) => sl.classList.toggle('active', i === currentIndex));
+        dots.forEach((dt, i) => dt.classList.toggle('active', i === currentIndex));
+      }
+
+      // Automatically change image every 3.5 seconds
+      const timer = setInterval(() => {
+        if (!isPaused) {
+          goToSlide(currentIndex + 1);
+        }
+      }, 3500);
+
+      momentCarouselIntervals[m.id] = timer;
+
+      // Pause auto-sliding on hover/touch so user can look at photo
+      card.addEventListener('mouseenter', () => { isPaused = true; });
+      card.addEventListener('mouseleave', () => { isPaused = false; });
+      card.addEventListener('touchstart', () => { isPaused = true; }, { passive: true });
+      card.addEventListener('touchend', () => { isPaused = false; }, { passive: true });
+
+      // Click dots to jump to specific photo
+      dots.forEach((dot) => {
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetIdx = parseInt(dot.getAttribute('data-dot-index'), 10);
+          goToSlide(targetIdx);
+        });
+      });
+    });
+
+    // Wire edit button click
     grid.querySelectorAll('.moment-edit-chip').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -727,13 +821,21 @@
       });
     });
 
+    // Wire media click to open Lightbox
     grid.querySelectorAll('.moment-media').forEach((media) => {
       media.addEventListener('click', () => {
         const id = media.getAttribute('data-moment-id');
         const item = state.moments.find((x) => x.id === id);
         if (!item) return;
-        if (item.imageUrl) {
-          openLightbox(item);
+        const images = getMomentImages(item);
+        if (images.length > 0) {
+          // Open lightbox on currently active slide
+          let activeIndex = 0;
+          const activeSlide = media.querySelector('.moment-slide-img.active');
+          if (activeSlide) {
+            activeIndex = parseInt(activeSlide.getAttribute('data-slide-index'), 10) || 0;
+          }
+          openLightbox(item, activeIndex);
         } else {
           openAdminModal('tab-photos', () => loadMomentIntoForm(id));
         }
@@ -814,32 +916,105 @@
     document.getElementById('adminLocation').value = p.location;
     document.getElementById('adminBio').value = p.bio;
 
-    // 2. Moments list
+    // 2. Moments list with Ranking & Reordering Controls
     const momentsList = document.getElementById('adminMomentsList');
     if (momentsList) {
-      momentsList.innerHTML = state.moments.map((m) => `
-        <div class="admin-item-row">
-          <div class="admin-item-info">
-            ${
-              m.imageUrl
-                ? `<img src="${escapeAttr(m.imageUrl)}" class="admin-item-thumb" alt="" />`
-                : `<div class="admin-item-thumb"><i class="fa-solid ${escapeAttr(m.icon || 'fa-image')}"></i></div>`
-            }
-            <div>
-              <strong>${escapeHtml(m.title)}</strong>
-              <span>${escapeHtml(m.category || '')} • ${m.imageUrl ? '✅ Photo Uploaded' : '📷 Waiting for photo'}</span>
+      momentsList.innerHTML = state.moments.map((m, idx) => {
+        const imgs = getMomentImages(m);
+        const rankNum = idx + 1;
+        const thumbHtml = imgs.length > 0
+          ? `<img src="${escapeAttr(imgs[0])}" class="admin-item-thumb" alt="" />`
+          : `<div class="admin-item-thumb"><i class="fa-solid ${escapeAttr(m.icon || 'fa-image')}"></i></div>`;
+
+        const rankOptions = state.moments.map((_, rIdx) => `
+          <option value="${rIdx + 1}" ${rIdx === idx ? 'selected' : ''}>Rank #${rIdx + 1}</option>
+        `).join('');
+
+        return `
+          <div class="admin-item-row" data-moment-row-id="${escapeAttr(m.id)}">
+            <div class="admin-item-info">
+              <span class="admin-rank-chip" title="Current Position: #${rankNum}">#${rankNum}</span>
+              <div class="admin-item-reorder-btns">
+                <button type="button" class="btn-rank-move" data-move-up="${escapeAttr(m.id)}" ${idx === 0 ? 'disabled' : ''} title="Move Up (Show Earlier)">▲</button>
+                <button type="button" class="btn-rank-move" data-move-down="${escapeAttr(m.id)}" ${idx === state.moments.length - 1 ? 'disabled' : ''} title="Move Down (Show Later)">▼</button>
+              </div>
+              <select class="admin-rank-select" data-select-rank="${escapeAttr(m.id)}" title="Change Ranking / Position directly">
+                ${rankOptions}
+              </select>
+              ${thumbHtml}
+              <div>
+                <strong>${escapeHtml(m.title)}</strong>
+                <span>${escapeHtml(m.category || '')} • ${imgs.length > 1 ? `🎞️ ${imgs.length} Photos (Auto-slides)` : (imgs.length === 1 ? '✅ 1 Photo' : '📷 Waiting for photo')}</span>
+              </div>
+            </div>
+            <div class="admin-item-actions">
+              <button type="button" class="btn-xs" data-admin-edit-moment="${escapeAttr(m.id)}"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+              <button type="button" class="btn-xs btn-danger" data-admin-del-moment="${escapeAttr(m.id)}"><i class="fa-solid fa-trash"></i></button>
             </div>
           </div>
-          <div class="admin-item-actions">
-            <button type="button" class="btn-xs" data-admin-edit-moment="${escapeAttr(m.id)}"><i class="fa-solid fa-pen-to-square"></i> Edit / Change Photo</button>
-            <button type="button" class="btn-xs btn-danger" data-admin-del-moment="${escapeAttr(m.id)}"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
+      // Wire Move Up button (Swaps with previous item)
+      momentsList.querySelectorAll('[data-move-up]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-move-up');
+          const idx = state.moments.findIndex((x) => x.id === id);
+          if (idx > 0) {
+            const temp = state.moments[idx];
+            state.moments[idx] = state.moments[idx - 1];
+            state.moments[idx - 1] = temp;
+            saveState();
+            renderMoments();
+            populateAdminForms();
+            showToast(`Moved "${temp.title}" up to Rank #${idx}!`);
+            await publishToGitHub(true);
+          }
+        });
+      });
+
+      // Wire Move Down button (Swaps with next item)
+      momentsList.querySelectorAll('[data-move-down]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-move-down');
+          const idx = state.moments.findIndex((x) => x.id === id);
+          if (idx !== -1 && idx < state.moments.length - 1) {
+            const temp = state.moments[idx];
+            state.moments[idx] = state.moments[idx + 1];
+            state.moments[idx + 1] = temp;
+            saveState();
+            renderMoments();
+            populateAdminForms();
+            showToast(`Moved "${temp.title}" down to Rank #${idx + 2}!`);
+            await publishToGitHub(true);
+          }
+        });
+      });
+
+      // Wire Rank Select dropdown (Direct Jump)
+      momentsList.querySelectorAll('[data-select-rank]').forEach((sel) => {
+        sel.addEventListener('change', async () => {
+          const id = sel.getAttribute('data-select-rank');
+          const targetRank = parseInt(sel.value, 10) - 1;
+          const idx = state.moments.findIndex((x) => x.id === id);
+          if (idx !== -1 && targetRank !== idx) {
+            const [item] = state.moments.splice(idx, 1);
+            state.moments.splice(targetRank, 0, item);
+            saveState();
+            renderMoments();
+            populateAdminForms();
+            showToast(`"${item.title}" is now Rank #${targetRank + 1}!`);
+            await publishToGitHub(true);
+          }
+        });
+      });
+
+      // Wire Edit button
       momentsList.querySelectorAll('[data-admin-edit-moment]').forEach((btn) => {
         btn.addEventListener('click', () => loadMomentIntoForm(btn.getAttribute('data-admin-edit-moment')));
       });
+
+      // Wire Delete button
       momentsList.querySelectorAll('[data-admin-del-moment]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-admin-del-moment');
@@ -889,6 +1064,84 @@
     }
   }
 
+  /* Multi-Thumbnail Grid Manager in the Admin Form */
+  let pendingMomentImages = [];
+
+  function renderMultiPreview() {
+    const wrap = document.getElementById('momentMultiPreviewWrap');
+    const countEl = document.getElementById('multiPreviewCount');
+    const gridEl = document.getElementById('momentThumbnailsGrid');
+    if (!wrap || !countEl || !gridEl) return;
+
+    countEl.textContent = pendingMomentImages.length;
+    if (pendingMomentImages.length === 0) {
+      wrap.hidden = true;
+      return;
+    }
+
+    wrap.hidden = false;
+    gridEl.innerHTML = pendingMomentImages.map((img, i) => `
+      <div class="multi-thumb-card" data-thumb-idx="${i}">
+        <span class="multi-thumb-badge">#${i + 1}</span>
+        <img src="${escapeAttr(img)}" alt="Photo ${i + 1}" />
+        <div class="multi-thumb-bar">
+          <button type="button" class="multi-thumb-btn" data-thumb-left="${i}" ${i === 0 ? 'disabled' : ''} title="Move Left (Show earlier)">◀</button>
+          <button type="button" class="multi-thumb-btn" data-thumb-right="${i}" ${i === pendingMomentImages.length - 1 ? 'disabled' : ''} title="Move Right (Show later)">▶</button>
+          <button type="button" class="multi-thumb-btn multi-thumb-del" data-thumb-del="${i}" title="Remove this photo">✕</button>
+        </div>
+      </div>
+    `).join('');
+
+    gridEl.querySelectorAll('[data-thumb-left]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-thumb-left'), 10);
+        if (idx > 0) {
+          const temp = pendingMomentImages[idx];
+          pendingMomentImages[idx] = pendingMomentImages[idx - 1];
+          pendingMomentImages[idx - 1] = temp;
+          renderMultiPreview();
+        }
+      });
+    });
+
+    gridEl.querySelectorAll('[data-thumb-right]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-thumb-right'), 10);
+        if (idx < pendingMomentImages.length - 1) {
+          const temp = pendingMomentImages[idx];
+          pendingMomentImages[idx] = pendingMomentImages[idx + 1];
+          pendingMomentImages[idx + 1] = temp;
+          renderMultiPreview();
+        }
+      });
+    });
+
+    gridEl.querySelectorAll('[data-thumb-del]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-thumb-del'), 10);
+        pendingMomentImages.splice(idx, 1);
+        renderMultiPreview();
+        showToast('Removed photo from box.');
+      });
+    });
+  }
+
+  function populateRankSelect(selectedRank = 1) {
+    const sel = document.getElementById('momentRankSelect');
+    if (!sel) return;
+    const total = Math.max(state.moments.length, 1);
+    let opts = '';
+    for (let r = 1; r <= total; r++) {
+      const isSel = r === selectedRank ? 'selected' : '';
+      let label = `Rank #${r}`;
+      if (r === 1) label += ' (Show 1st / Top Box)';
+      else if (r === 2) label += ' (Show 2nd)';
+      else if (r === total) label += ' (Show at the End)';
+      opts += `<option value="${r}" ${isSel}>${label}</option>`;
+    }
+    sel.innerHTML = opts;
+  }
+
   function loadMomentIntoForm(id) {
     const item = state.moments.find((x) => x.id === id);
     if (!item) return;
@@ -897,26 +1150,26 @@
     document.getElementById('momentCategoryInput').value = item.category || '';
     document.getElementById('momentDateInput').value = item.date || '';
     document.getElementById('momentDescInput').value = item.description || '';
-    document.getElementById('momentImageUrlInput').value = item.imageUrl && !item.imageUrl.startsWith('data:') ? item.imageUrl : '';
-    pendingMomentImgData = item.imageUrl || '';
+    document.getElementById('momentImageUrlInput').value = '';
 
-    const previewWrap = document.getElementById('momentPreviewWrap');
-    const previewImg = document.getElementById('momentPreviewImg');
+    pendingMomentImages = getMomentImages(item);
+    renderMultiPreview();
+
+    const currentRank = state.moments.findIndex((x) => x.id === id) + 1;
+    populateRankSelect(currentRank);
+
     const dropzoneText = document.getElementById('momentDropzoneText');
     const editPill = document.getElementById('momentEditingPill');
 
     if (editPill) editPill.hidden = false;
 
-    if (pendingMomentImgData) {
-      previewImg.src = pendingMomentImgData;
-      previewWrap.hidden = false;
-      if (dropzoneText) dropzoneText.textContent = 'Tap here to REPLACE existing photo with a new one';
-    } else {
-      previewWrap.hidden = true;
-      if (dropzoneText) dropzoneText.textContent = 'Tap to choose photo from Phone Gallery / Camera';
+    if (dropzoneText) {
+      dropzoneText.textContent = pendingMomentImages.length > 0
+        ? `Tap to ADD MORE photos to this box (${pendingMomentImages.length} attached)`
+        : 'Tap to choose 1 or MORE photos (Auto-slides in box)';
     }
 
-    document.getElementById('momentFormHeading').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editing: ${escapeHtml(item.title)}`;
+    document.getElementById('momentFormHeading').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editing Box #${currentRank}: ${escapeHtml(item.title)}`;
     document.getElementById('momentSaveBtnText').textContent = 'Save & Publish Changes';
     document.getElementById('momentTitleInput').focus();
   }
@@ -924,12 +1177,14 @@
   function resetMomentForm() {
     document.getElementById('momentPhotoForm').reset();
     document.getElementById('momentEditId').value = '';
-    pendingMomentImgData = '';
-    document.getElementById('momentPreviewWrap').hidden = true;
+    pendingMomentImages = [];
+    renderMultiPreview();
+    populateRankSelect(state.moments.length + 1);
+
     const editPill = document.getElementById('momentEditingPill');
     if (editPill) editPill.hidden = true;
     const dropzoneText = document.getElementById('momentDropzoneText');
-    if (dropzoneText) dropzoneText.textContent = 'Tap here to choose or replace photo from Phone Gallery';
+    if (dropzoneText) dropzoneText.textContent = 'Tap to choose 1 or MORE photos (Auto-slides in box)';
     document.getElementById('momentFormHeading').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Add / Edit Photo &amp; Title`;
     document.getElementById('momentSaveBtnText').textContent = 'Save & Publish Photo';
   }
@@ -957,16 +1212,67 @@
   }
 
   /* --------------------------------------------------------------------------
-     6. LIGHTBOX FOR FULLSCREEN PHOTO VIEWING
+     6. LIGHTBOX FOR FULLSCREEN PHOTO VIEWING (WITH MULTI-PHOTO SLIDESHOW)
      -------------------------------------------------------------------------- */
-  function openLightbox(item) {
+  function openLightbox(item, startIndex = 0) {
+    currentLightboxMoment = item;
+    currentLightboxIndex = startIndex;
+    renderLightboxView();
     const lb = document.getElementById('lightboxBackdrop');
-    document.getElementById('lightboxImg').src = item.imageUrl;
-    document.getElementById('lightboxBadge').textContent = item.category || 'Milestone';
-    document.getElementById('lightboxTitle').textContent = item.title;
-    document.getElementById('lightboxDesc').textContent = item.description || '';
     lb.classList.add('open');
     lb.setAttribute('aria-hidden', 'false');
+  }
+
+  function renderLightboxView() {
+    if (!currentLightboxMoment) return;
+    const images = getMomentImages(currentLightboxMoment);
+    const imgEl = document.getElementById('lightboxImg');
+    const badgeEl = document.getElementById('lightboxBadge');
+    const titleEl = document.getElementById('lightboxTitle');
+    const descEl = document.getElementById('lightboxDesc');
+    const prevBtn = document.getElementById('lightboxPrevBtn');
+    const nextBtn = document.getElementById('lightboxNextBtn');
+    const counterEl = document.getElementById('lightboxCounter');
+
+    if (images.length > 0) {
+      currentLightboxIndex = (currentLightboxIndex + images.length) % images.length;
+      imgEl.src = images[currentLightboxIndex];
+    } else {
+      imgEl.src = '';
+    }
+
+    badgeEl.textContent = currentLightboxMoment.category || 'Milestone';
+    titleEl.textContent = currentLightboxMoment.title;
+    descEl.textContent = currentLightboxMoment.description || '';
+
+    if (images.length > 1) {
+      if (prevBtn) prevBtn.hidden = false;
+      if (nextBtn) nextBtn.hidden = false;
+      if (counterEl) {
+        counterEl.hidden = false;
+        counterEl.textContent = `${currentLightboxIndex + 1} / ${images.length}`;
+      }
+    } else {
+      if (prevBtn) prevBtn.hidden = true;
+      if (nextBtn) nextBtn.hidden = true;
+      if (counterEl) counterEl.hidden = true;
+    }
+  }
+
+  function lightboxNext() {
+    if (!currentLightboxMoment) return;
+    const images = getMomentImages(currentLightboxMoment);
+    if (images.length <= 1) return;
+    currentLightboxIndex = (currentLightboxIndex + 1) % images.length;
+    renderLightboxView();
+  }
+
+  function lightboxPrev() {
+    if (!currentLightboxMoment) return;
+    const images = getMomentImages(currentLightboxMoment);
+    if (images.length <= 1) return;
+    currentLightboxIndex = (currentLightboxIndex - 1 + images.length) % images.length;
+    renderLightboxView();
   }
 
   /* --------------------------------------------------------------------------
@@ -1465,15 +1771,45 @@
       });
     }
 
-    // Lightbox Close
+    // Lightbox Controls (Multi-Photo Prev/Next & Keyboard Arrows)
     const lbBackdrop = document.getElementById('lightboxBackdrop');
     const closeLbBtn = document.getElementById('closeLightboxBtn');
+    const lbPrevBtn = document.getElementById('lightboxPrevBtn');
+    const lbNextBtn = document.getElementById('lightboxNextBtn');
+
     if (closeLbBtn && lbBackdrop) {
       closeLbBtn.addEventListener('click', () => lbBackdrop.classList.remove('open'));
       lbBackdrop.addEventListener('click', (e) => {
         if (e.target === lbBackdrop) lbBackdrop.classList.remove('open');
       });
     }
+
+    if (lbPrevBtn) {
+      lbPrevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        lightboxPrev();
+      });
+    }
+
+    if (lbNextBtn) {
+      lbNextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        lightboxNext();
+      });
+    }
+
+    // Keyboard navigation for Lightbox (Left / Right / Escape)
+    document.addEventListener('keydown', (e) => {
+      if (lbBackdrop && lbBackdrop.classList.contains('open')) {
+        if (e.key === 'ArrowLeft') {
+          lightboxPrev();
+        } else if (e.key === 'ArrowRight') {
+          lightboxNext();
+        } else if (e.key === 'Escape') {
+          lbBackdrop.classList.remove('open');
+        }
+      }
+    });
 
     // Admin Modal Triggers
     const adminTriggers = [
@@ -1534,31 +1870,59 @@
       });
     });
 
-    // Moment Photo File Input Upload
+    // Multi-Image File Selection (Supports uploading 1 or more photos at once)
     const momentFileInput = document.getElementById('momentFileInput');
     if (momentFileInput) {
       momentFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        showToast(`Compressing ${files.length} photo(s)...`);
         try {
-          pendingMomentImgData = await compressImageFile(file, 1050, 0.84);
-          document.getElementById('momentPreviewImg').src = pendingMomentImgData;
-          document.getElementById('momentPreviewWrap').hidden = false;
-          showToast('Photo ready! Click "Save Photo to Website".');
+          const compressedList = await Promise.all(
+            files.map((f) => compressImageFile(f, 960, 0.78))
+          );
+          pendingMomentImages.push(...compressedList);
+          renderMultiPreview();
+
+          const dropzoneText = document.getElementById('momentDropzoneText');
+          if (dropzoneText) {
+            dropzoneText.textContent = `Tap to ADD MORE photos (${pendingMomentImages.length} attached)`;
+          }
+          showToast(`Added ${files.length} photo(s)! Total: ${pendingMomentImages.length}`);
+          momentFileInput.value = '';
         } catch (err) {
-          showToast(err.message || 'Could not process image.');
+          showToast(err.message || 'Could not process images.');
         }
       });
     }
 
-    const clearMomentImgBtn = document.getElementById('clearMomentImgBtn');
-    if (clearMomentImgBtn) {
-      clearMomentImgBtn.addEventListener('click', () => {
-        pendingMomentImgData = '';
-        document.getElementById('momentImageUrlInput').value = '';
-        document.getElementById('momentPreviewWrap').hidden = true;
+    // Add Photo by URL Button
+    const addMomentUrlBtn = document.getElementById('addMomentUrlBtn');
+    if (addMomentUrlBtn) {
+      addMomentUrlBtn.addEventListener('click', () => {
+        const urlInput = document.getElementById('momentImageUrlInput');
+        const urlVal = urlInput ? urlInput.value.trim() : '';
+        if (!urlVal) {
+          showToast('Please enter an image URL.');
+          return;
+        }
+        pendingMomentImages.push(urlVal);
+        urlInput.value = '';
+        renderMultiPreview();
+        showToast('Photo URL added to box!');
+      });
+    }
+
+    // Clear All Photos from Box
+    const clearAllImgsBtn = document.getElementById('clearAllMomentImgsBtn');
+    if (clearAllImgsBtn) {
+      clearAllImgsBtn.addEventListener('click', () => {
+        pendingMomentImages = [];
+        renderMultiPreview();
         const dropzoneText = document.getElementById('momentDropzoneText');
-        if (dropzoneText) dropzoneText.textContent = 'Tap to choose photo from Phone Gallery / Camera';
+        if (dropzoneText) dropzoneText.textContent = 'Tap to choose 1 or MORE photos (Auto-slides in box)';
+        showToast('Cleared photos from this box.');
       });
     }
 
@@ -1568,7 +1932,7 @@
     const cancelEditMomentBtn = document.getElementById('cancelEditMomentBtn');
     if (cancelEditMomentBtn) cancelEditMomentBtn.addEventListener('click', resetMomentForm);
 
-    // Save Moment / Photo Form (Auto-Publishes to Cloud)
+    // Save Moment / Photo Form with Ranking Control & Multi-Image Slideshow
     const momentForm = document.getElementById('momentPhotoForm');
     if (momentForm) {
       momentForm.addEventListener('submit', async (e) => {
@@ -1578,34 +1942,49 @@
         const category = document.getElementById('momentCategoryInput').value.trim() || 'Milestone';
         const date = document.getElementById('momentDateInput').value.trim() || '2026';
         const desc = document.getElementById('momentDescInput').value.trim();
+
+        // Also check if user typed a URL without clicking "Add URL"
         const typedUrl = document.getElementById('momentImageUrlInput').value.trim();
-        const finalImg = pendingMomentImgData || typedUrl;
+        if (typedUrl && !pendingMomentImages.includes(typedUrl)) {
+          pendingMomentImages.push(typedUrl);
+        }
+
+        const rankSel = document.getElementById('momentRankSelect');
+        const targetRank = rankSel ? parseInt(rankSel.value, 10) - 1 : 0;
 
         if (editId) {
           const idx = state.moments.findIndex((x) => x.id === editId);
           if (idx !== -1) {
-            state.moments[idx] = {
+            const updatedItem = {
               ...state.moments[idx],
               title,
               category,
               date,
               description: desc,
-              imageUrl: finalImg
+              images: [...pendingMomentImages],
+              imageUrl: pendingMomentImages[0] || ''
             };
+            // Reorder if rank was changed
+            state.moments.splice(idx, 1);
+            const insertIdx = Math.min(Math.max(0, targetRank), state.moments.length);
+            state.moments.splice(insertIdx, 0, updatedItem);
+            showToast(`Updated "${title}" (Rank #${insertIdx + 1})!`);
           }
-          showToast('Updated photo & title!');
         } else {
-          state.moments.unshift({
+          const newItem = {
             id: `moment-${Date.now()}`,
             title,
             category,
             date,
             description: desc,
-            imageUrl: finalImg,
+            images: [...pendingMomentImages],
+            imageUrl: pendingMomentImages[0] || '',
             icon: 'fa-camera-retro',
             accent: 'cyan'
-          });
-          showToast('New photo & title added!');
+          };
+          const insertIdx = Math.min(Math.max(0, targetRank), state.moments.length);
+          state.moments.splice(insertIdx, 0, newItem);
+          showToast(`Added "${title}" at Rank #${insertIdx + 1}!`);
         }
 
         saveState();
