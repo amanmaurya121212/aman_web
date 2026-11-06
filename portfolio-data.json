@@ -1,5 +1,5 @@
 {
-  "updatedAt": 1730000000000,
+  "updatedAt": 1793942841344,
   "profile": {
     "name": "Aman Kumar Maurya",
     "photoUrl": "https://avatars.githubusercontent.com/u/185803580?v=4",
@@ -64,7 +64,13 @@
       "gradient": "linear-gradient(135deg, #0f172a, #0369a1, #00f2fe)",
       "imageUrl": "",
       "description": "100% offline, ultra-low-latency desktop voice automation OS powered by a local Kaldi/Vosk acoustic neural wake-word engine (\"Adventure\"), Per-Monitor DPI-aware Windows UI Automation for sub-pixel input field clicking, SAPI asynchronous TTS, hardware telemetry, and live console HUD.",
-      "tech": ["Python", "Vosk Neural STT", "Windows UIA (DPI-Aware)", "SAPI TTS", "Zero Cloud API"],
+      "tech": [
+        "Python",
+        "Vosk Neural STT",
+        "Windows UIA (DPI-Aware)",
+        "SAPI TTS",
+        "Zero Cloud API"
+      ],
       "github": "https://github.com/amanmaurya121212",
       "live": ""
     },
@@ -78,7 +84,15 @@
       "gradient": "linear-gradient(135deg, #1e1b4b, #6d28d9, #a855f7)",
       "imageUrl": "",
       "description": "Full-stack personal task-automation AI agent that takes high-level goals in natural language, plans multi-step execution graphs, and invokes extensible tools across Anthropic Claude & OpenAI models with PostgreSQL state, Redis queues, and Qdrant semantic vector memory.",
-      "tech": ["FastAPI", "Next.js 14", "Claude & OpenAI", "PostgreSQL", "Redis", "Qdrant Vector DB", "Docker"],
+      "tech": [
+        "FastAPI",
+        "Next.js 14",
+        "Claude & OpenAI",
+        "PostgreSQL",
+        "Redis",
+        "Qdrant Vector DB",
+        "Docker"
+      ],
       "github": "https://github.com/amanmaurya121212/autonomous-ai-agent",
       "live": ""
     },
@@ -92,7 +106,15 @@
       "gradient": "linear-gradient(135deg, #042f2e, #059669, #34d399)",
       "imageUrl": "",
       "description": "ChatGPT-style multi-turn conversational agent built with LangGraph and Google Gemini API. Features conditional tool routing (DuckDuckGo web search + calculator), per-thread SQLite checkpoint persistence (SqliteSaver), and dual React (Vite) + Streamlit UIs.",
-      "tech": ["LangGraph", "Google Gemini API", "LangChain", "FastAPI", "React (Vite)", "Streamlit", "SQLite"],
+      "tech": [
+        "LangGraph",
+        "Google Gemini API",
+        "LangChain",
+        "FastAPI",
+        "React (Vite)",
+        "Streamlit",
+        "SQLite"
+      ],
       "github": "https://github.com/amanmaurya121212/langgraph-ai-chatbot",
       "live": ""
     },
@@ -106,7 +128,13 @@
       "gradient": "linear-gradient(135deg, #1f2937, #0284c7, #38bdf8)",
       "imageUrl": "",
       "description": "Engineered automated multi-step AI agent pipelines in n8n combining real-time web search retrieval with natural-language querying (\"Chat with Data/Database\") over structured SQL records for instant analytical insights.",
-      "tech": ["n8n Workflows", "LLMs", "SQL Databases", "Web Search Automation", "Webhook API"],
+      "tech": [
+        "n8n Workflows",
+        "LLMs",
+        "SQL Databases",
+        "Web Search Automation",
+        "Webhook API"
+      ],
       "github": "https://github.com/amanmaurya121212",
       "live": ""
     },
@@ -120,7 +148,14 @@
       "gradient": "linear-gradient(135deg, #3b0764, #9333ea, #f43f5e)",
       "imageUrl": "",
       "description": "Built an end-to-end facial similarity engine from scratch using a ResNet50 transfer-learning deep CNN backbone trained and evaluated on thousands of facial images across 100+ Bollywood celebrities with high-dimensional feature embedding extraction.",
-      "tech": ["PyTorch", "ResNet50", "Deep CNNs", "Facial Embeddings", "Transfer Learning", "Streamlit"],
+      "tech": [
+        "PyTorch",
+        "ResNet50",
+        "Deep CNNs",
+        "Facial Embeddings",
+        "Transfer Learning",
+        "Streamlit"
+      ],
       "github": "https://github.com/amanmaurya121212/which_bollywood_celebrity_are-_you",
       "live": ""
     },
@@ -134,7 +169,13 @@
       "gradient": "linear-gradient(135deg, #450a0a, #dc2626, #f59e0b)",
       "imageUrl": "",
       "description": "Hand-coded a browser-based real-time computer vision pipeline using p5.js and ml5.js (PoseNet) skeletal keypoint tracking to dynamically scale, rotate, and overlay a full virtual Iron Man suit onto live webcam video streams.",
-      "tech": ["JavaScript", "p5.js", "ml5.js (PoseNet)", "Real-Time AR", "Keypoint Geometry"],
+      "tech": [
+        "JavaScript",
+        "p5.js",
+        "ml5.js (PoseNet)",
+        "Real-Time AR",
+        "Keypoint Geometry"
+      ],
       "github": "https://github.com/amanmaurya121212/Become_Ironman",
       "live": ""
     },
@@ -148,7 +189,13 @@
       "gradient": "linear-gradient(135deg, #0c4a6e, #0284c7, #2dd4bf)",
       "imageUrl": "",
       "description": "Browser-native deep learning pose estimation engine capturing live webcam feeds to detect 17 human body keypoints (eyes, shoulders, elbows, wrists, hips, knees, ankles) and compute real-time inter-joint Euclidean kinematics.",
-      "tech": ["ml5.js (PoseNet)", "p5.js Canvas", "JavaScript", "Euclidean Kinematics", "HTML5"],
+      "tech": [
+        "ml5.js (PoseNet)",
+        "p5.js Canvas",
+        "JavaScript",
+        "Euclidean Kinematics",
+        "HTML5"
+      ],
       "github": "https://github.com/amanmaurya121212/realtime-pose-detection",
       "live": ""
     },
@@ -162,7 +209,13 @@
       "gradient": "linear-gradient(135deg, #090d16, #1d4ed8, #00f2fe)",
       "imageUrl": "",
       "description": "Selected research presented at ISRO – U.R. Rao Satellite Centre (URSC) on deep learning for high-throughput satellite data processing and autonomous mission operations, paired with the Federated Space Intelligence (FSI) decentralized orbital learning prototype.",
-      "tech": ["Deep Learning", "Federated Learning", "Satellite Telemetry", "Orbital Edge AI", "ISRO-URSC"],
+      "tech": [
+        "Deep Learning",
+        "Federated Learning",
+        "Satellite Telemetry",
+        "Orbital Edge AI",
+        "ISRO-URSC"
+      ],
       "github": "https://github.com/amanmaurya121212",
       "live": ""
     },
@@ -176,7 +229,14 @@
       "gradient": "linear-gradient(135deg, #064e3b, #059669, #10b981)",
       "imageUrl": "",
       "description": "B.Sc. Statistics research applying classical Box–Jenkins ARIMA(1,1,1) modeling on 5 years of daily TCS.NS market prices. Includes ADF stationarity tests, ACF/PACF diagnostics, and automated research report generation, achieving 0.27% MAPE and 100% 95% CI coverage.",
-      "tech": ["Python", "statsmodels", "ARIMA(1,1,1)", "ADF Test", "yfinance", "Statistical Inference"],
+      "tech": [
+        "Python",
+        "statsmodels",
+        "ARIMA(1,1,1)",
+        "ADF Test",
+        "yfinance",
+        "Statistical Inference"
+      ],
       "github": "https://github.com/amanmaurya121212/tcs-arima-forecast",
       "live": ""
     },
@@ -190,7 +250,12 @@
       "gradient": "linear-gradient(135deg, #311042, #7e22ce, #ec4899)",
       "imageUrl": "",
       "description": "Python automation workflow integrating generative AI scripting, voice synthesis, and programmatic media assembly for end-to-end automated video creation.",
-      "tech": ["Python", "Generative AI", "Video Automation", "Media Processing"],
+      "tech": [
+        "Python",
+        "Generative AI",
+        "Video Automation",
+        "Media Processing"
+      ],
       "github": "https://github.com/amanmaurya121212/automate-video",
       "live": ""
     },
@@ -204,7 +269,12 @@
       "gradient": "linear-gradient(135deg, #1e293b, #4f46e5, #818cf8)",
       "imageUrl": "",
       "description": "Remote server implementation for the Model Context Protocol (MCP) in Python, enabling LLM agents to securely discover and invoke external tools and data sources.",
-      "tech": ["Python", "Model Context Protocol (MCP)", "Agent Tooling", "PyProject"],
+      "tech": [
+        "Python",
+        "Model Context Protocol (MCP)",
+        "Agent Tooling",
+        "PyProject"
+      ],
       "github": "https://github.com/amanmaurya121212/MCP_remote_server",
       "live": ""
     },
@@ -218,7 +288,13 @@
       "gradient": "linear-gradient(135deg, #042f2e, #0d9488, #00f2fe)",
       "imageUrl": "",
       "description": "High-performance healthcare web portal featuring real-time store open/closed status calculation, WhatsApp prescription photo ordering, live medicine catalog search, clinical vitals showcase, Google Maps navigation, and PIN-protected Owner Admin Dashboard.",
-      "tech": ["HTML5 & CSS3", "Vanilla JS", "WhatsApp Order Engine", "LocalStorage CMS", "Vercel"],
+      "tech": [
+        "HTML5 & CSS3",
+        "Vanilla JS",
+        "WhatsApp Order Engine",
+        "LocalStorage CMS",
+        "Vercel"
+      ],
       "github": "https://github.com/amanmaurya121212/medical_shop",
       "live": "https://nidhimedicalstore.vercel.app"
     },
@@ -232,7 +308,14 @@
       "gradient": "linear-gradient(135deg, #31102f, #be123c, #fb7185)",
       "imageUrl": "",
       "description": "Full-stack role-based platform supporting ADMIN, THEATER Manager, and CUSTOMER workflows. Features theater approval, screen & show scheduling, interactive seat map selection (Regular, Premium, Gold), and an integrated digital wallet.",
-      "tech": ["Java 17", "Spring Boot", "Spring Data JPA", "React (Vite)", "SQLite", "Bootstrap 5"],
+      "tech": [
+        "Java 17",
+        "Spring Boot",
+        "Spring Data JPA",
+        "React (Vite)",
+        "SQLite",
+        "Bootstrap 5"
+      ],
       "github": "https://github.com/amanmaurya121212/Online_Movie_Ticket_book-",
       "live": ""
     },
@@ -246,7 +329,13 @@
       "gradient": "linear-gradient(135deg, #1e1b4b, #2563eb, #38bdf8)",
       "imageUrl": "",
       "description": "Hackathon social-impact web platform connecting volunteers with community opportunities and services, featuring an embedded conversational AI ChatBox powered by an n8n webhook workflow.",
-      "tech": ["HTML5", "JavaScript", "Tailwind CSS", "n8n Webhook AI", "Lucide Icons"],
+      "tech": [
+        "HTML5",
+        "JavaScript",
+        "Tailwind CSS",
+        "n8n Webhook AI",
+        "Lucide Icons"
+      ],
       "github": "https://github.com/amanmaurya121212/hackathon-web-mastermind",
       "live": ""
     },
@@ -260,10 +349,15 @@
       "gradient": "linear-gradient(135deg, #18181b, #ea580c, #facc15)",
       "imageUrl": "",
       "description": "Responsive React + Vite e-commerce storefront deployed on Vercel alongside interactive web applications including Magic Calculator and Spotify UI clones.",
-      "tech": ["React 18", "Vite", "JavaScript", "Responsive CSS", "Vercel"],
+      "tech": [
+        "React 18",
+        "Vite",
+        "JavaScript",
+        "Responsive CSS",
+        "Vercel"
+      ],
       "github": "https://github.com/amanmaurya121212/shoe_shop_test",
       "live": "https://shoe-shop-test.vercel.app"
     }
   ]
 }
-
