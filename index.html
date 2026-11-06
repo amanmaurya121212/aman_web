@@ -1095,10 +1095,29 @@
 
       <!-- Unlocked Admin Content -->
       <div class="admin-dashboard-body" id="adminDashboardBody" hidden>
+        <!-- Cloud Sync Status Banner -->
+        <div class="cloud-sync-banner" id="cloudSyncBanner">
+          <div class="cloud-sync-info">
+            <span class="cloud-dot" id="cloudStatusDot"></span>
+            <div>
+              <strong id="cloudStatusTitle">Cloud Sync: Setup Required for Multi-Device Photos</strong>
+              <p id="cloudStatusSub">Paste your GitHub Token once in Tab 4 so photos uploaded or edited on your phone show on ALL phones &amp; laptops.</p>
+            </div>
+          </div>
+          <div class="cloud-sync-actions">
+            <button type="button" class="btn-primary btn-sm" id="syncNowBtn">
+              <i class="fa-solid fa-cloud-arrow-up"></i> <span id="syncNowBtnText">Publish to All Devices</span>
+            </button>
+            <button type="button" class="btn-outline-sm" id="openCloudSetupBtn">
+              <i class="fa-brands fa-github"></i> <span>Cloud Setup</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Admin Tabs -->
         <div class="admin-tabs">
           <button class="admin-tab active" data-admin-tab="tab-photos">
-            <i class="fa-solid fa-images"></i> 1. Add Photos &amp; Titles
+            <i class="fa-solid fa-images"></i> 1. Add / Edit Photos &amp; Titles
           </button>
           <button class="admin-tab" data-admin-tab="tab-profile">
             <i class="fa-solid fa-id-card"></i> 2. Profile Photo &amp; Info
@@ -1107,7 +1126,7 @@
             <i class="fa-solid fa-code"></i> 3. Manage Projects
           </button>
           <button class="admin-tab" data-admin-tab="tab-backup">
-            <i class="fa-solid fa-database"></i> 4. Backup &amp; PIN
+            <i class="fa-solid fa-cloud"></i> 4. Cloud Sync &amp; PIN
           </button>
         </div>
 
@@ -1115,6 +1134,10 @@
         <div class="admin-tab-pane active" id="tab-photos">
           <div class="admin-panel-grid">
             <form class="admin-form-card" id="momentPhotoForm">
+              <div class="editing-mode-pill" id="momentEditingPill" hidden>
+                <span><i class="fa-solid fa-pen-to-square"></i> Editing Card — Change photo or title below</span>
+                <button type="button" class="btn-xs" id="cancelEditMomentBtn">Cancel Edit</button>
+              </div>
               <h4 id="momentFormHeading"><i class="fa-solid fa-cloud-arrow-up"></i> Add / Edit Photo &amp; Title</h4>
               <input type="hidden" id="momentEditId" value="" />
 
@@ -1135,13 +1158,21 @@
               </div>
 
               <div class="form-group">
-                <label>Upload Photo From Device (Drag &amp; Drop or Click)</label>
+                <label id="momentUploadLabel">Upload or Replace Photo From Phone / PC</label>
                 <div class="file-dropzone" id="momentFileDropzone">
                   <input type="file" id="momentFileInput" accept="image/*" />
                   <div class="dropzone-prompt">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span>Click or drop photo here (Auto-optimized)</span>
+                    <i class="fa-solid fa-camera"></i>
+                    <span id="momentDropzoneText">Tap here to choose or replace photo from Phone Gallery</span>
                   </div>
+                </div>
+              </div>
+
+              <div class="admin-img-preview-wrap" id="momentPreviewWrap" hidden>
+                <img src="" alt="Preview" id="momentPreviewImg" />
+                <div class="preview-meta">
+                  <span class="preview-ready-badge"><i class="fa-solid fa-circle-check"></i> Photo Ready</span>
+                  <button type="button" class="btn-xs btn-danger" id="clearMomentImgBtn">Remove Photo</button>
                 </div>
               </div>
 
@@ -1150,28 +1181,23 @@
                 <input type="text" id="momentImageUrlInput" placeholder="https://..." />
               </div>
 
-              <div class="admin-img-preview-wrap" id="momentPreviewWrap" hidden>
-                <img src="" alt="Preview" id="momentPreviewImg" />
-                <button type="button" class="btn-xs btn-danger" id="clearMomentImgBtn">Remove Image</button>
-              </div>
-
               <div class="form-group">
                 <label for="momentDescInput">Description / Story</label>
                 <textarea id="momentDescInput" rows="3" placeholder="Brief caption about this achievement or moment..."></textarea>
               </div>
 
               <div class="form-btn-row">
-                <button type="submit" class="btn-primary">
-                  <i class="fa-solid fa-floppy-disk"></i> <span id="momentSaveBtnText">Save Photo to Website</span>
+                <button type="submit" class="btn-primary" id="momentSubmitBtn">
+                  <i class="fa-solid fa-floppy-disk"></i> <span id="momentSaveBtnText">Save &amp; Publish Photo</span>
                 </button>
-                <button type="button" class="btn-outline-sm" id="resetMomentFormBtn">Clear</button>
+                <button type="button" class="btn-outline-sm" id="resetMomentFormBtn">Clear / New</button>
               </div>
             </form>
 
             <!-- Existing Photos List -->
             <div class="admin-list-card">
               <h4><i class="fa-solid fa-layer-group"></i> Current Photos on Website</h4>
-              <p class="admin-help-text">Click <strong>Edit / Upload Photo</strong> on any item to attach your photo or change its title.</p>
+              <p class="admin-help-text">Tap <strong>Edit / Change Photo</strong> on any item to replace its photo or edit its title.</p>
               <div class="admin-items-list" id="adminMomentsList">
                 <!-- Populated by app.js -->
               </div>
@@ -1317,13 +1343,60 @@
           </div>
         </div>
 
-        <!-- TAB 4: BACKUP, EXPORT & PIN -->
+        <!-- TAB 4: CLOUD SYNC, BACKUP & PIN -->
         <div class="admin-tab-pane" id="tab-backup">
           <div class="admin-panel-grid">
-            <div class="admin-form-card">
-              <h4><i class="fa-solid fa-file-export"></i> Export / Import Portfolio Data</h4>
+            <!-- Cloud Sync Setup Card -->
+            <form class="admin-form-card" id="cloudSyncConfigForm">
+              <h4><i class="fa-brands fa-github"></i> Multi-Device Cloud Sync (GitHub)</h4>
               <p class="admin-help-text">
-                All photos, titles, and project edits are automatically saved in your browser's local storage. You can also export a JSON backup file to keep or move across devices.
+                Connect your GitHub repository so that whenever you upload or edit photos on your phone, they are saved directly into your website repo and show on <strong>every phone, tablet &amp; laptop worldwide</strong>!
+              </p>
+
+              <div class="form-group">
+                <label for="githubTokenInput">GitHub Personal Access Token (PAT) *</label>
+                <div class="token-input-wrap">
+                  <input type="password" id="githubTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+                  <button type="button" class="btn-xs" id="toggleTokenVisibilityBtn" title="Show/Hide Token"><i class="fa-solid fa-eye" id="tokenEyeIcon"></i></button>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="githubRepoInput">Repository</label>
+                  <input type="text" id="githubRepoInput" value="amanmaurya121212/aman_web" placeholder="username/repo" />
+                </div>
+                <div class="form-group">
+                  <label for="githubBranchInput">Branch</label>
+                  <input type="text" id="githubBranchInput" value="main" placeholder="main" />
+                </div>
+              </div>
+
+              <div class="cloud-steps-guide">
+                <strong><i class="fa-solid fa-circle-info"></i> How to get your free GitHub token (1-minute setup):</strong>
+                <ol>
+                  <li>Open <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">github.com/settings/tokens</a> (Personal access tokens classic).</li>
+                  <li>Tap <strong>"Generate new token (classic)"</strong>. Note: <em>Aman Portfolio</em>.</li>
+                  <li>Check the <strong>`repo`</strong> scope checkbox, scroll down and tap <strong>Generate token</strong>.</li>
+                  <li>Copy the token starting with <code>ghp_</code> and paste it here!</li>
+                </ol>
+              </div>
+
+              <div class="form-btn-row mt-3">
+                <button type="submit" class="btn-primary" id="saveCloudTokenBtn">
+                  <i class="fa-solid fa-plug-circle-check"></i> Save &amp; Connect Token
+                </button>
+                <button type="button" class="btn-outline-sm" id="testCloudSyncBtn">
+                  <i class="fa-solid fa-rotate"></i> Test Sync
+                </button>
+              </div>
+            </form>
+
+            <!-- Export / Import & PIN Card -->
+            <div class="admin-form-card">
+              <h4><i class="fa-solid fa-file-export"></i> Manual Backup &amp; Restore</h4>
+              <p class="admin-help-text">
+                Download a JSON backup of your portfolio or import an existing data file.
               </p>
               <div class="form-btn-row mt-3">
                 <button type="button" class="btn-primary" id="exportDataBtn">
@@ -1334,20 +1407,23 @@
                   <input type="file" id="importDataInput" accept=".json" hidden />
                 </label>
               </div>
+
+              <hr class="admin-divider" />
+
+              <form id="changePinForm">
+                <h4><i class="fa-solid fa-key"></i> Change Admin PIN</h4>
+                <div class="form-group">
+                  <label for="newPinInput">New Admin PIN</label>
+                  <input type="password" id="newPinInput" required minlength="4" maxlength="12" placeholder="Enter new PIN" />
+                </div>
+                <button type="submit" class="btn-outline-sm">Update PIN</button>
+              </form>
+
               <hr class="admin-divider" />
               <h4><i class="fa-solid fa-rotate-left"></i> Reset to Factory Defaults</h4>
-              <p class="admin-help-text">Restore default photos, projects, and profile texts.</p>
-              <button type="button" class="btn-xs btn-danger mt-2" id="resetAllDataBtn">Reset All Portfolio Data</button>
+              <p class="admin-help-text">Restore original sample data.</p>
+              <button type="button" class="btn-xs btn-danger mt-2" id="resetAllDataBtn">Reset All Data</button>
             </div>
-
-            <form class="admin-form-card" id="changePinForm">
-              <h4><i class="fa-solid fa-key"></i> Change Admin PIN</h4>
-              <div class="form-group">
-                <label for="newPinInput">New Admin PIN (4–8 digits/chars)</label>
-                <input type="password" id="newPinInput" required minlength="4" maxlength="8" placeholder="Enter new PIN" />
-              </div>
-              <button type="submit" class="btn-primary">Update PIN</button>
-            </form>
           </div>
         </div>
       </div>

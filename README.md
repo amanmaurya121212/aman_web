@@ -17,10 +17,16 @@ An interactive, animated AI & Machine Learning Engineer portfolio built for **Am
   - Filterable by **Agentic AI & LLMs**, **Computer Vision & Voice AI**, **Space & Data Science**, and **Full-Stack & Web**, plus live instant search.
   - Includes **JARVIS ("Adventure") Offline Neural Voice Assistant**, **Autonomous AI Agent (FastAPI + Next.js + Qdrant)**, **Stateful LangGraph + Gemini Chatbot**, **n8n Text-to-SQL Agent**, **ResNet50 Celebrity Look-Alike Engine**, **Real-Time AR Iron Man Suit (PoseNet)**, **Nidhi Medical Store Portal**, **Spring Boot + React Movie Ticket System**, and more.
 - 🔐 **PIN-Protected Portfolio Owner Admin Dashboard**:
-  - **Tab 1 — Add Photos & Titles**: Upload achievement/moment photos (auto-compressed via HTML5 Canvas) and customize their **Title**, **Category Badge**, **Date**, and **Description**.
+  - **Multi-Device Cloud Sync (GitHub)**: Upload or edit photos directly from your phone and publish them instantly to your GitHub repository (`portfolio-data.json`), making new photos immediately visible to **every phone, tablet, and computer worldwide**.
+  - **Tab 1 — Add / Edit Photos & Titles**: Upload new photos from your phone gallery/camera or easily replace existing ones, modify photo titles, badges, dates, and descriptions.
   - **Tab 2 — Profile Photo & Info**: Upload your personal profile photo and edit bio, caption title, LinkedIn (`linkedin.com/in/aman12maurya12`), GitHub (`github.com/amanmaurya121212`), email, and phone.
   - **Tab 3 — Manage Projects**: Add new projects with cover photos, tech stack tags, GitHub links, and live demo URLs.
-  - **Tab 4 — Backup & PIN**: Export/Import JSON backup of all uploaded photos and edits, or change your Admin PIN.
+  - **Tab 4 — Cloud Sync, Backup & PIN**: Connect your GitHub Token once, export/import JSON backups, or change your Admin PIN.
+- 📱 **How to Enable Multi-Device Photo Syncing from Your Phone**:
+  1. Open the Admin Dashboard on your phone (`PIN: 113114`) and tap **Tab 4 (Cloud Sync & PIN)**.
+  2. Create a free Personal Access Token on GitHub at [github.com/settings/tokens](https://github.com/settings/tokens) with the **`repo`** permission.
+  3. Paste the token into Tab 4 and tap **Save & Connect Token**.
+  4. Now, whenever you upload or edit a photo on your phone and tap **Save & Publish Photo**, it automatically updates your website live for everyone!
 - 📄 **Built-in Updated CV / Resume Modal (1-Click PDF Print/Save)**:
   - Includes all newest projects, updated LinkedIn URL, and Departmental 1st Rank distinction (with all subject marks/CGPA numbers omitted as requested).
 - 🤖 **"Ask Aman's AI" Floating Smart Assistant**:

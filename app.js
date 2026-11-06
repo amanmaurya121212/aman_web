@@ -7,6 +7,10 @@
 
   const STORAGE_KEY = 'aman_portfolio_cms_v1';
   const PIN_STORAGE_KEY = 'aman_portfolio_admin_pin_v2';
+  const GITHUB_TOKEN_KEY = 'aman_portfolio_github_token';
+  const GITHUB_REPO_KEY = 'aman_portfolio_github_repo';
+  const GITHUB_BRANCH_KEY = 'aman_portfolio_github_branch';
+  const DATA_FILE_PATH = 'portfolio-data.json';
 
   /* --------------------------------------------------------------------------
      1. DEFAULT PORTFOLIO DATA (GitHub + CV + Research + Local Workspace)
@@ -280,7 +284,7 @@
   };
 
   /* --------------------------------------------------------------------------
-     2. STATE MANAGEMENT & STORAGE HELPERS
+     2. STATE MANAGEMENT, GITHUB CLOUD SYNC & STORAGE HELPERS
      -------------------------------------------------------------------------- */
   let state = loadState();
   let activeCategory = 'all';
@@ -296,6 +300,7 @@
       if (!raw) return structuredClone(DEFAULT_DATA);
       const parsed = JSON.parse(raw);
       return {
+        updatedAt: parsed.updatedAt || 0,
         profile: { ...DEFAULT_DATA.profile, ...(parsed.profile || {}) },
         moments: Array.isArray(parsed.moments) && parsed.moments.length ? parsed.moments : structuredClone(DEFAULT_DATA.moments),
         projects: Array.isArray(parsed.projects) && parsed.projects.length ? parsed.projects : structuredClone(DEFAULT_DATA.projects)
@@ -308,6 +313,7 @@
 
   function saveState() {
     try {
+      state.updatedAt = Date.now();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
       showToast('Storage limit reached! Try uploading a smaller image.');
@@ -322,6 +328,158 @@
     localStorage.setItem(PIN_STORAGE_KEY, newPin);
   }
 
+  function getGitHubConfig() {
+    return {
+      token: localStorage.getItem(GITHUB_TOKEN_KEY) || '',
+      repo: localStorage.getItem(GITHUB_REPO_KEY) || 'amanmaurya121212/aman_web',
+      branch: localStorage.getItem(GITHUB_BRANCH_KEY) || 'main'
+    };
+  }
+
+  function setGitHubConfig(token, repo, branch) {
+    if (token !== undefined) localStorage.setItem(GITHUB_TOKEN_KEY, token.trim());
+    if (repo !== undefined) localStorage.setItem(GITHUB_REPO_KEY, repo.trim());
+    if (branch !== undefined) localStorage.setItem(GITHUB_BRANCH_KEY, branch.trim());
+    updateCloudStatusUI();
+  }
+
+  function updateCloudStatusUI() {
+    const cfg = getGitHubConfig();
+    const dot = document.getElementById('cloudStatusDot');
+    const title = document.getElementById('cloudStatusTitle');
+    const sub = document.getElementById('cloudStatusSub');
+    if (!dot || !title || !sub) return;
+
+    if (cfg.token) {
+      dot.className = 'cloud-dot connected';
+      title.textContent = 'Cloud Sync: Connected to GitHub (' + cfg.repo + ')';
+      sub.textContent = 'Photos & edits uploaded on your phone automatically save to GitHub and show on all devices!';
+    } else {
+      dot.className = 'cloud-dot';
+      title.textContent = 'Cloud Sync: Setup Required for Multi-Device Photos';
+      sub.textContent = 'Paste your GitHub Token once in Tab 4 so photos uploaded on your phone show on ALL phones & laptops.';
+    }
+  }
+
+  async function fetchRemoteData() {
+    try {
+      const cfg = getGitHubConfig();
+      // 1. Try local/deployed portfolio-data.json
+      let res = await fetch(`portfolio-data.json?t=${Date.now()}`).catch(() => null);
+
+      // 2. Fallback to GitHub raw if deployed file is older or not yet regenerated
+      if (!res || !res.ok) {
+        const rawUrl = `https://raw.githubusercontent.com/${cfg.repo}/${cfg.branch}/${DATA_FILE_PATH}?t=${Date.now()}`;
+        res = await fetch(rawUrl).catch(() => null);
+      }
+
+      if (res && res.ok) {
+        const remote = await res.json();
+        if (remote && remote.profile && Array.isArray(remote.moments)) {
+          const localUpdated = state.updatedAt || 0;
+          const remoteUpdated = remote.updatedAt || 0;
+          if (remoteUpdated >= localUpdated || !state.updatedAt) {
+            state = {
+              updatedAt: remoteUpdated,
+              profile: { ...DEFAULT_DATA.profile, ...(remote.profile || {}) },
+              moments: remote.moments.length ? remote.moments : structuredClone(DEFAULT_DATA.moments),
+              projects: remote.projects.length ? remote.projects : structuredClone(DEFAULT_DATA.projects)
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            renderProfile();
+            renderProjects();
+            renderMoments();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Remote sync check:', e);
+    }
+  }
+
+  async function publishToGitHub(isAutomated = false) {
+    const cfg = getGitHubConfig();
+    const dot = document.getElementById('cloudStatusDot');
+    const syncBtnText = document.getElementById('syncNowBtnText');
+    const title = document.getElementById('cloudStatusTitle');
+    const sub = document.getElementById('cloudStatusSub');
+
+    if (!cfg.token) {
+      if (!isAutomated) {
+        showToast('Please add your GitHub Token in Tab 4 first!');
+        switchAdminTab('tab-backup');
+      }
+      return false;
+    }
+
+    try {
+      if (dot) dot.className = 'cloud-dot syncing';
+      if (syncBtnText) syncBtnText.textContent = 'Publishing to Cloud...';
+      if (title) title.textContent = 'Publishing changes to GitHub...';
+
+      // 1. Get current remote file SHA
+      const apiUrl = `https://api.github.com/repos/${cfg.repo}/contents/${DATA_FILE_PATH}?ref=${cfg.branch}`;
+      let sha = null;
+      try {
+        const getRes = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${cfg.token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (getRes.ok) {
+          const fileData = await getRes.json();
+          sha = fileData.sha;
+        }
+      } catch (e) {
+        console.warn('Could not fetch existing file SHA:', e);
+      }
+
+      // 2. Prepare payload
+      state.updatedAt = Date.now();
+      const contentStr = JSON.stringify(state, null, 2);
+      // UTF-8 safe base64 encoding
+      const base64Content = btoa(unescape(encodeURIComponent(contentStr)));
+
+      const putBody = {
+        message: `Update portfolio photos & content via Phone Admin [${new Date().toLocaleTimeString()}]`,
+        content: base64Content,
+        branch: cfg.branch
+      };
+      if (sha) putBody.sha = sha;
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${cfg.token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify(putBody)
+      });
+
+      if (!putRes.ok) {
+        const errJson = await putRes.json().catch(() => ({}));
+        throw new Error(errJson.message || `GitHub error ${putRes.status}`);
+      }
+
+      if (dot) dot.className = 'cloud-dot connected';
+      if (syncBtnText) syncBtnText.textContent = 'Publish to All Devices';
+      if (title) title.textContent = 'Cloud Sync: Live & Synced globally ✓';
+      if (sub) sub.textContent = `Published at ${new Date().toLocaleTimeString()}! Photos are now live on every phone & device.`;
+      showToast('✅ Published! Photos will now show on ALL phones & devices.');
+      return true;
+    } catch (err) {
+      console.error('Publish error:', err);
+      if (dot) dot.className = 'cloud-dot';
+      if (syncBtnText) syncBtnText.textContent = 'Publish to All Devices';
+      if (title) title.textContent = 'Publish Error';
+      if (sub) sub.textContent = err.message || 'Check your GitHub token';
+      showToast(`Cloud Sync: ${err.message || 'Check token in Tab 4'}`);
+      return false;
+    }
+  }
+
   function showToast(msg) {
     const toast = document.getElementById('toastNotification');
     if (!toast) return;
@@ -330,13 +488,13 @@
     clearTimeout(showToast._timer);
     showToast._timer = setTimeout(() => {
       toast.classList.remove('show');
-    }, 3200);
+    }, 3600);
   }
 
   /* --------------------------------------------------------------------------
-     3. CLIENT-SIDE IMAGE COMPRESSION (FOR SMOOTH PHOTO UPLOADS)
+     3. CLIENT-SIDE IMAGE COMPRESSION (OPTIMIZED FOR MOBILE PHONE PHOTOS)
      -------------------------------------------------------------------------- */
-  function compressImageFile(file, maxWidth = 1000, quality = 0.82) {
+  function compressImageFile(file, maxWidth = 960, quality = 0.78) {
     return new Promise((resolve, reject) => {
       if (!file || !file.type.startsWith('image/')) {
         reject(new Error('Please select a valid image file.'));
@@ -633,6 +791,16 @@
   }
 
   function populateAdminForms() {
+    // 0. Update Cloud Sync status & inputs
+    const cfg = getGitHubConfig();
+    const tokenIn = document.getElementById('githubTokenInput');
+    const repoIn = document.getElementById('githubRepoInput');
+    const branchIn = document.getElementById('githubBranchInput');
+    if (tokenIn) tokenIn.value = cfg.token;
+    if (repoIn) repoIn.value = cfg.repo;
+    if (branchIn) branchIn.value = cfg.branch;
+    updateCloudStatusUI();
+
     // 1. Profile form
     const p = state.profile;
     document.getElementById('adminProfilePreview').src = p.photoUrl || 'https://avatars.githubusercontent.com/u/185803580?v=4';
@@ -663,7 +831,7 @@
             </div>
           </div>
           <div class="admin-item-actions">
-            <button type="button" class="btn-xs" data-admin-edit-moment="${escapeAttr(m.id)}">Edit / Upload Photo</button>
+            <button type="button" class="btn-xs" data-admin-edit-moment="${escapeAttr(m.id)}"><i class="fa-solid fa-pen-to-square"></i> Edit / Change Photo</button>
             <button type="button" class="btn-xs btn-danger" data-admin-del-moment="${escapeAttr(m.id)}"><i class="fa-solid fa-trash"></i></button>
           </div>
         </div>
@@ -673,13 +841,14 @@
         btn.addEventListener('click', () => loadMomentIntoForm(btn.getAttribute('data-admin-edit-moment')));
       });
       momentsList.querySelectorAll('[data-admin-del-moment]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-admin-del-moment');
           state.moments = state.moments.filter((x) => x.id !== id);
           saveState();
           renderMoments();
           populateAdminForms();
           showToast('Photo card removed.');
+          await publishToGitHub(true);
         });
       });
     }
@@ -707,13 +876,14 @@
         btn.addEventListener('click', () => loadProjectIntoForm(btn.getAttribute('data-admin-edit-proj')));
       });
       projectsList.querySelectorAll('[data-admin-del-proj]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-admin-del-proj');
           state.projects = state.projects.filter((x) => x.id !== id);
           saveState();
           renderProjects();
           populateAdminForms();
           showToast('Project removed.');
+          await publishToGitHub(true);
         });
       });
     }
@@ -732,15 +902,22 @@
 
     const previewWrap = document.getElementById('momentPreviewWrap');
     const previewImg = document.getElementById('momentPreviewImg');
+    const dropzoneText = document.getElementById('momentDropzoneText');
+    const editPill = document.getElementById('momentEditingPill');
+
+    if (editPill) editPill.hidden = false;
+
     if (pendingMomentImgData) {
       previewImg.src = pendingMomentImgData;
       previewWrap.hidden = false;
+      if (dropzoneText) dropzoneText.textContent = 'Tap here to REPLACE existing photo with a new one';
     } else {
       previewWrap.hidden = true;
+      if (dropzoneText) dropzoneText.textContent = 'Tap to choose photo from Phone Gallery / Camera';
     }
 
     document.getElementById('momentFormHeading').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Editing: ${escapeHtml(item.title)}`;
-    document.getElementById('momentSaveBtnText').textContent = 'Update Photo & Title';
+    document.getElementById('momentSaveBtnText').textContent = 'Save & Publish Changes';
     document.getElementById('momentTitleInput').focus();
   }
 
@@ -749,8 +926,12 @@
     document.getElementById('momentEditId').value = '';
     pendingMomentImgData = '';
     document.getElementById('momentPreviewWrap').hidden = true;
-    document.getElementById('momentFormHeading').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Add New Photo &amp; Title`;
-    document.getElementById('momentSaveBtnText').textContent = 'Save Photo to Website';
+    const editPill = document.getElementById('momentEditingPill');
+    if (editPill) editPill.hidden = true;
+    const dropzoneText = document.getElementById('momentDropzoneText');
+    if (dropzoneText) dropzoneText.textContent = 'Tap here to choose or replace photo from Phone Gallery';
+    document.getElementById('momentFormHeading').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Add / Edit Photo &amp; Title`;
+    document.getElementById('momentSaveBtnText').textContent = 'Save & Publish Photo';
   }
 
   function loadProjectIntoForm(id) {
@@ -1376,16 +1557,21 @@
         pendingMomentImgData = '';
         document.getElementById('momentImageUrlInput').value = '';
         document.getElementById('momentPreviewWrap').hidden = true;
+        const dropzoneText = document.getElementById('momentDropzoneText');
+        if (dropzoneText) dropzoneText.textContent = 'Tap to choose photo from Phone Gallery / Camera';
       });
     }
 
     const resetMomentBtn = document.getElementById('resetMomentFormBtn');
     if (resetMomentBtn) resetMomentBtn.addEventListener('click', resetMomentForm);
 
-    // Save Moment / Photo Form
+    const cancelEditMomentBtn = document.getElementById('cancelEditMomentBtn');
+    if (cancelEditMomentBtn) cancelEditMomentBtn.addEventListener('click', resetMomentForm);
+
+    // Save Moment / Photo Form (Auto-Publishes to Cloud)
     const momentForm = document.getElementById('momentPhotoForm');
     if (momentForm) {
-      momentForm.addEventListener('submit', (e) => {
+      momentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const editId = document.getElementById('momentEditId').value.trim();
         const title = document.getElementById('momentTitleInput').value.trim();
@@ -1407,7 +1593,7 @@
               imageUrl: finalImg
             };
           }
-          showToast('Updated photo & title on website!');
+          showToast('Updated photo & title!');
         } else {
           state.moments.unshift({
             id: `moment-${Date.now()}`,
@@ -1419,13 +1605,16 @@
             icon: 'fa-camera-retro',
             accent: 'cyan'
           });
-          showToast('New photo & title added to website!');
+          showToast('New photo & title added!');
         }
 
         saveState();
         renderMoments();
         populateAdminForms();
         resetMomentForm();
+
+        // Auto-publish to GitHub so ALL devices see the changes!
+        await publishToGitHub(true);
       });
     }
 
@@ -1448,7 +1637,7 @@
     // Save Profile Admin Form
     const profileForm = document.getElementById('profileAdminForm');
     if (profileForm) {
-      profileForm.addEventListener('submit', (e) => {
+      profileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const urlInput = document.getElementById('profilePhotoUrlInput').value.trim();
         if (pendingProfileImgData) {
@@ -1470,6 +1659,8 @@
         renderProfile();
         populateAdminForms();
         showToast('Profile photo & personal details updated!');
+
+        await publishToGitHub(true);
       });
     }
 
@@ -1494,7 +1685,7 @@
     // Save Project Admin Form
     const projectForm = document.getElementById('projectAdminForm');
     if (projectForm) {
-      projectForm.addEventListener('submit', (e) => {
+      projectForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const editId = document.getElementById('projectEditId').value.trim();
         const title = document.getElementById('projTitleInput').value.trim();
@@ -1550,6 +1741,60 @@
         renderProjects();
         populateAdminForms();
         resetProjectForm();
+
+        await publishToGitHub(true);
+      });
+    }
+
+    // Cloud Sync Config Form & Banner Handlers
+    const cloudSyncForm = document.getElementById('cloudSyncConfigForm');
+    if (cloudSyncForm) {
+      cloudSyncForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tokenVal = document.getElementById('githubTokenInput').value.trim();
+        const repoVal = document.getElementById('githubRepoInput').value.trim() || 'amanmaurya121212/aman_web';
+        const branchVal = document.getElementById('githubBranchInput').value.trim() || 'main';
+
+        setGitHubConfig(tokenVal, repoVal, branchVal);
+        showToast('Saving GitHub configuration...');
+        await publishToGitHub(false);
+      });
+    }
+
+    const testCloudSyncBtn = document.getElementById('testCloudSyncBtn');
+    if (testCloudSyncBtn) {
+      testCloudSyncBtn.addEventListener('click', () => {
+        publishToGitHub(false);
+      });
+    }
+
+    const syncNowBtn = document.getElementById('syncNowBtn');
+    if (syncNowBtn) {
+      syncNowBtn.addEventListener('click', () => {
+        publishToGitHub(false);
+      });
+    }
+
+    const openCloudSetupBtn = document.getElementById('openCloudSetupBtn');
+    if (openCloudSetupBtn) {
+      openCloudSetupBtn.addEventListener('click', () => {
+        switchAdminTab('tab-backup');
+      });
+    }
+
+    const toggleTokenBtn = document.getElementById('toggleTokenVisibilityBtn');
+    if (toggleTokenBtn) {
+      toggleTokenBtn.addEventListener('click', () => {
+        const tokenInput = document.getElementById('githubTokenInput');
+        const eyeIcon = document.getElementById('tokenEyeIcon');
+        if (!tokenInput) return;
+        if (tokenInput.type === 'password') {
+          tokenInput.type = 'text';
+          if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye-slash';
+        } else {
+          tokenInput.type = 'password';
+          if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye';
+        }
       });
     }
 
@@ -1654,7 +1899,7 @@
   /* --------------------------------------------------------------------------
      12. BOOTSTRAP PORTFOLIO
      -------------------------------------------------------------------------- */
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     renderProfile();
     renderProjects();
     renderMoments();
@@ -1664,6 +1909,9 @@
     initTypewriter();
     initOrbitalSimulator();
     initAiAssistant();
+
+    // Check & fetch latest synced photos/data from Cloud so all devices stay up-to-date
+    await fetchRemoteData();
   });
 })();
 
